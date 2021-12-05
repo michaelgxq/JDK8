@@ -87,14 +87,24 @@ public class ThreadLocal<T> {
     /**
      * The next hash code to be given out. Updated atomically. Starts at
      * zero.
+     *
+     * 该成员变量是一个静态成员变量，因此，该成员变量的值是当前线程中所有 ThreadLocal 类使用共用的
      */
     private static AtomicInteger nextHashCode =
         new AtomicInteger();
 
     /**
+     * 该成员变量为用于生成每一个 ThreadLocal 类实例的 ID 值的一个魔数
+     *
      * The difference between successively generated hash codes - turns
      * implicit sequential thread-local IDs into near-optimally spread
      * multiplicative hash values for power-of-two-sized tables.
+     *
+     * 上面这段注释的含义为
+     * 两个连续生成的哈希 code 的差
+     *（即 两个连续生成的哈希 code 相减后的差就是该成员变量的值，因为该类的哈希 code 的生成规则就是使用该成员变量连续相加（见下面的 nextHashCode() 方法））
+     * 把隐式连续（因为光从这些数（即 ID 值看，我们看不出它们是连续的））的 ThreadLocal 类实例的 ID 值转换成能够在大小为 2 的幂的数组中近乎最优分布的乘法哈希值
+     *（即 使用该成员变量计算（即 相加）得到的 ThreadLocal 类实例的 ID 值经过哈希计算之后的值，能够基本上完全散布在大小为 2 的幂的数组中，而不产生冲突）
      */
     private static final int HASH_INCREMENT = 0x61c88647;
 
@@ -144,6 +154,10 @@ public class ThreadLocal<T> {
     /**
      * Creates a thread local variable.
      * @see #withInitial(java.util.function.Supplier)
+     *
+     * 该构造方法是一个空构造方法
+     *（因为 ThreadLocal 类的成员变量都是有设置初始值的，所以就无需通过构造方法给这些成员变量设置值了，因此，只要有一个空构造方法即可）
+     *
      */
     public ThreadLocal() {
     }
@@ -226,7 +240,7 @@ public class ThreadLocal<T> {
             // 然后
             // 往该容器中存放对当前这个变量（即 当前要往 ThreadLocal 中存放的变量）
             createMap(t, value);
-        
+
         return value;
     }
 
@@ -401,17 +415,28 @@ public class ThreadLocal<T> {
         /**
          * The table, resized as necessary.
          * table.length MUST always be a power of two.
-         * 该数组的大小必须为 2 的幂（即如果该该数组扩容（其实就是新建一个数组，因为数组本身是大小固定的）它的大小必须为 2 的幂）
+         *
+         * 该成员变量就是用于存放 Entry 类实例（见 Entry 类笔记）的数组（即 容器）
+         * 即
+         * 该数组（即 容器）就是真正存放那些需要线程隔离的数据的地方
+         * 该数组（即 容器）的大小永远为 2 的幂
+         *（因为该容器的初始大小为 16（它就是 2 的 4 次幂），之后每一次扩容都是在原来大小的基础上 * 2）
+         *（具体见 resize() 方法）
          */
         private Entry[] table;
 
         /**
          * The number of entries in the table.
+         *
+         * 该成员变量用于记录容器（即 成员变量 table）的大小
          */
         private int size = 0;
 
         /**
          * The next size value at which to resize.
+         *
+         * 该成员变量用于记录用于容器（即 成员变量 table）扩容的阈值
+         *（这个阈值本质上就是当然容器的容量 * 2 / 3（见下面的 setThreshold() 方法））
          */
         private int threshold; // Default to 0
 
@@ -549,28 +574,61 @@ public class ThreadLocal<T> {
             Entry[] tab = table;
             int len = tab.length;
 
-            // 计算槽位（即 数组的下标）
+            // 对当前这个 ThreadLocal 类实例进行哈希运算获取对应的槽位（即 数组的下标）
+            //（即 以当前容器的大小为模，使用当前 ThreadLocal 类实例的 ID 值进行取模）
             int i = key.threadLocalHashCode & (len-1);
 
-            // 从当前槽位（即 数组的下标）开始循环遍历数组，直到找到合适的槽位，放入 Entry 类实例
-            // 这里的 “合适” 是指
-            // 1. 当前槽位就是该 ThreadLocal 类实例所在的槽位
+            // 从当前ThreadLocal 类实例槽位（即 数组的下标）开始循环遍历数组，直到找到合适的槽位，放入 Entry 类实例
+            // 从该 for 循环中的两个 if 判断可以看出，该 for 循环主要做两件事
+            // 1. 第一个 if 判断
+            //    判断当前槽位是否就是该 ThreadLocal 类实例所在的槽位
             //   （即 当前调用该 set() 方法的目的是为了覆盖原先存放在该 ThreadLocal 中的变量）
-            // 2. 当前槽位所对应的 Entry 类实例已经“不新鲜”（即 下面 replaceStaleEntry() 方法名中的 stale）
+            //    如果是
+            //    就直接用新值（即 当前调用该 set() 方法需要设置的值（即 当要存放到 ThreadLocal 中的值））覆盖它对应的旧值
+            //
+            // 2. 第二个 if 判断
+            //    判断当前槽位所对应的 Entry 类实例是否已经“不新鲜”（即 下面 replaceStaleEntry() 方法名中的 stale）
             //   （“不新鲜” 是指该 Entry 类实例所指向的 ThreadLocal 类实例已经被 GC 回收）
-            //    那么
+            //    如果是
             //    说明此时该槽位所对应的 Entry 类实例已经没有用了
             //    此时
-            //    就可以把新的值（即当前调用该 set() 方法所要设置的值（即 当要存放到 ThreadLocal 中的值））转换成一个新的 Entry 类实例
-            //    替换掉 “不新鲜” 的 Entry 类实例
-            for (Entry e = tab[i]; e != null; e = tab[i = nextIndex(i, len)]) {
+            //    就需要 “清理” 该 “不新鲜” 的 Entry 类实例（即 把该槽位置为 null）
+            //    并且
+            //    继续往后遍历，判断之后遍历到的槽位是否该 ThreadLocal 类实例所在的槽位
+            //   （“清空” 和 继续往后遍历的动作是在 replaceStaleEntry() 方法中完成的）
+
+
+            // 注意
+            // 如果我们是第一次往当前这个 ThreadLocal 类实例中存放变量
+            // 并且
+            // 当前槽位没有因为哈希冲突而存放其他 ThreadLocal 类实例对应的 Entry 类实例
+            // 那么
+            // 代码是不会走到这个 for 循环中去的
+            //（因为该槽位直接就不符合该 for 循环的执行条件 --- e != null）
+            // 因此
+            // 这整个 for 循环就是处理哈希冲突的逻辑
+            for (Entry e = tab[i];
+                 e != null; // for 循环的执行条件（即 遇到槽位上的元素为 null（即 槽位上没有元素）时，停止循环）
+                 e = tab[i = nextIndex(i, len)]) {
                 // 获取当前 Entry 类实例所指向的 ThreadLocal 类实例
                 ThreadLocal<?> k = e.get();
 
                 // 如果该 ThreadLocal 类实例就是当前这个 ThreadLocal 类实例
-                //（说明此时调用这个 set() 方法是为了替换原先存放在这个 ThreadLocal 中的变量）
+                // 说明
+                // 此时调用这个 set() 方法是为了替换原先存放在这个 ThreadLocal 中的变量
                 // 那么
                 // 就直接用新值（即 当前调用该 set() 方法需要设置的值（即 当要存放到 ThreadLocal 中的值））覆盖它对应的旧值
+
+                // 注意
+                // 在两种情况下，会走到这个 if 判断
+                // 1. 这个 for 循环一进来就走进这个 if 判断
+                //    说明当前调用这个 set() 方法是为了替换原先存放在这个 ThreadLocal 中的变量
+                //    并且
+                //    当前这个 ThreadLocal 类实例对应的 Entry 类实例 "没有哈希冲突"（因为它就在自己经过哈希运算后的槽位上）
+                // 2. 这个 for 循环运行了几次之后才进这个 if 判断
+                //    说明当前调用这个 set() 方法是为了替换原先存放在这个 ThreadLocal 中的变量
+                //    但是
+                //    当前这个 ThreadLocal 类实例对应的 Entry 类实例 "有哈希冲突"，从而被放到了其他槽位上了
                 if (k == key) {
                     // 使用新值（即 当前调用该 set() 方法需要设置的值（即 当要存放到 ThreadLocal 中的值））覆盖旧值
                     e.value = value;
@@ -580,23 +638,32 @@ public class ThreadLocal<T> {
                 }
 
                 // 如果当前 Entry 类实例所指向的 ThreadLocal 类实例为 null
-                //（代码走到这里这里，表示上面的 if 语句没走到，说明当前没在容器 table 中找到）
                 // 那么
                 // 就表示该 ThreadLocal 类实例以及被 GC 回收了（即 该 ThreadLocal 类实例所在的 Entry 类实例已经不新鲜了）
                 // 此时
                 // 就可以使用新的值（即当前调用该 set() 方法所要设置的值）转换成一个新的 Entry 类实例替换掉 “不新鲜” 的 Entry 类实例
+                // 通过这种方式来解决哈希冲突
 
                 // 注意
                 // 代码走到这里这里，表示上面的 if 语句没走到
                 // 即
-                // 说明此时调用这个 set() 方法 “可能” 不是为了替换原先存放在这个 ThreadLocal 中的变量
-                // 之所以说是可能
-                // 因为此时容器 table 还没遍历完
+                // 说明此时调用这个 set() 方法 “可能” 不是为了替换原先存放在这个 ThreadLocal 实例中的变量
+                //（其实是存放在对应的 Entry 类实例中）
+                // 之所以说是 “可能“
+                // 因为
+                // 当前这个 ThreadLocal 类实例所对应的 Entry 类实例之前在存放到容器（即 成员变量 table）中时，可能遇到了哈希冲突
+                // 从而通过 “线性探测法” 被放到了其他的槽位上了
+                // 并且
+                // 此时容器 table 还没遍历完
+                // 所以
+                // 这时可能就还没遇到其他槽位上的这个 ThreadLocal 类实例对应的 Entry 类实例
                 // 这也就是为什么下面调用的 replaceStaleEntry() 方法中会有和上面这个 if 语句相同逻辑的代码
                 // 就是为了在遍历容器 table 中的剩余元素时，对这种可能性再次进行验证
+                //（即 判断当前 ThreadLocal 类实例对应的 Entry 类实例是否被放到了其他槽位上了）
                 if (k == null) {
                     // 把新的值（即当前调用该 set() 方法所要设置的值（即 当要存放到 ThreadLocal 中的值））转换成一个新的 Entry 类实例
                     // 替换掉 “不新鲜” 的 Entry 类实例
+                    // 通过这种方式来解决哈希冲突
                     replaceStaleEntry(key, value, i);
 
                     // 完成后直接返回
@@ -604,8 +671,25 @@ public class ThreadLocal<T> {
                 }
             }
 
+            // 在两种情况下，代码会走到这里
+            // 1. 上面的 for 循环直接没走
+            //    这表示我们是第一次使用当前这个 ThreadLocal 类实例来存放遍历
+            //    并且
+            //    这个槽位没有哈希冲突
+            //
+            // 2. 上面的 for 循环走完了（即 上面 for 循环遍历到的元素都不符合 for 循环中的两个 if 判断）
+            //    这表示当前这个 ThreadLocal 类实例遇到了哈希冲突
+            //    但是
+            //    在进行 “线性探测” 的时候，没有遇到存放着 “不新鲜” 的 Entry 类实例的槽位来存放它
+            //    从而导致
+            //    在遍历到一个 “空槽位”（即 该槽位中的元素为 null）后，终止了上面的 for 循环
+            //
+            // 无论是上面哪种情况
+            // 我们此时都是直接往该 “空槽位” （即 该槽位中的元素为 null）中存放 Entry 类实例即可
             tab[i] = new Entry(key, value);
             int sz = ++size;
+
+
             if (!cleanSomeSlots(i, sz) && sz >= threshold)
                 rehash();
         }
@@ -688,7 +772,9 @@ public class ThreadLocal<T> {
             // 找出 并且 “清理” 当前 run（它的含义见该方法上面的注释）中，所有 “不新鲜” 的槽位
 
             // 以当前 “不新鲜” 的槽位（即 下标）为原点，向前遍历容器 table（即 ThreadLocalMap 的成员变量）
-            for (int i = prevIndex(staleSlot, len); (e = tab[i]) != null; i = prevIndex(i, len))
+            for (int i = prevIndex(staleSlot, len);
+                 (e = tab[i]) != null;
+                 i = prevIndex(i, len))
                 // 找到 “不新鲜” 的 Entry 类实例之后，记录下它的槽位（即 下标）
                 // 如果遍历的过程中遇到多个 “不新鲜” 的 Entry 类实例
                 // 那么
@@ -700,7 +786,10 @@ public class ThreadLocal<T> {
             // occurs first
 
             // 以当前 “不新鲜” 的槽位（即 下标）为原点，向后遍历容器 table（即 ThreadLocalMap 的成员变量）
-            for (int i = nextIndex(staleSlot, len); (e = tab[i]) != null; i = nextIndex(i, len)) {
+            // 这一步其实是为了完成 set() 方法中那个没有完成的遍历动作
+            for (int i = nextIndex(staleSlot, len);
+                 (e = tab[i]) != null;
+                 i = nextIndex(i, len)) {
                 // 获取当前 Entry 类实例所指向的 ThreadLocal 类实例
                 ThreadLocal<?> k = e.get();
 
@@ -804,12 +893,25 @@ public class ThreadLocal<T> {
             // 该 for 循环用于遍历从当前槽位（即 形参 staleSlot 所对应的下标）开始，到下一个元素为 null 的槽位之间的子数组中的所有元素
             // 清理该范围内的所有 “不新鲜” 的 Entry 类实例
             for (i = nextIndex(staleSlot, len); (e = tab[i]) != null; i = nextIndex(i, len)) {
+                // 获取当前 Entry 类实例所指向的 ThreadLocal 类实例
                 ThreadLocal<?> k = e.get();
+
+                // 如果 ThreadLocal 类实例为 null，即表示当前这个 Entry 类实例是 “不新鲜” 的
+                // 那么
+                // 就 “清理” 当前 “不新鲜” 的 Entry 类实例
+                // 即
+                // 把它的 Value（即 存放在 ThreadLocal 中的那个变量）置为 null（以便后期 GC 时回收该对象）
+                // 并且
+                // 把该槽位置为 null
                 if (k == null) {
                     e.value = null;
                     tab[i] = null;
                     size--;
-                } else {
+                }
+                else {
+                    // 如果 ThreadLocal 类实例不为 null，即表示当前这个 Entry 类实例是 “新鲜” 的
+                    // 那么
+                    // 此时就要对该元素（即 当前槽位中的 Entry 类实例）进行一次 rehash
                     int h = k.threadLocalHashCode & (len - 1);
                     if (h != i) {
                         tab[i] = null;
