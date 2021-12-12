@@ -607,8 +607,14 @@ public class ThreadLocal<T> {
             //（因为该槽位直接就不符合该 for 循环的执行条件 --- e != null）
             // 因此
             // 这整个 for 循环就是处理哈希冲突的逻辑
+
+            // 注意
+            // 如果没有 replaceStaleEntry() 方法中的元素交换
+            // 那么
+            // 就有概率出现使用某个 ThreadLocal 存放值的时候，本该走下面的 for 循环，但是却遇到了空槽位，而不走该 for 循环
+            // 从而导致容器中有重复元素的情况（具体见 ThreadLocal 笔记中的 “元素交换”）
             for (Entry e = tab[i];
-                 e != null; // for 循环的执行条件（即 遇到槽位上的元素为 null（即 槽位上没有元素）时，停止循环）
+                 e != null; // for 循环的执行条件（即 遇到空槽位（即 槽位上的元素为 null（即 槽位上没有元素））时，停止循环）
                  e = tab[i = nextIndex(i, len)]) {
                 // 获取当前 Entry 类实例所指向的 ThreadLocal 类实例
                 ThreadLocal<?> k = e.get();
@@ -661,7 +667,7 @@ public class ThreadLocal<T> {
                 // 就是为了在遍历容器 table 中的剩余元素时，对这种可能性再次进行验证
                 //（即 判断当前 ThreadLocal 类实例对应的 Entry 类实例是否被放到了其他槽位上了）
                 if (k == null) {
-                    // 把新的值（即当前调用该 set() 方法所要设置的值（即 当要存放到 ThreadLocal 中的值））转换成一个新的 Entry 类实例
+                    // 把新的值（即当前调用该 set() 方法所要设置的值（即 当前要存放到 ThreadLocal 中的值））转换成一个新的 Entry 类实例
                     // 替换掉 “不新鲜” 的 Entry 类实例
                     // 通过这种方式来解决哈希冲突
                     replaceStaleEntry(key, value, i);
@@ -768,27 +774,34 @@ public class ThreadLocal<T> {
             int slotToExpunge = staleSlot;
 
             // 下面两个 for 循环的目的
-            // 是为了找出以当前 “不新鲜” 的槽位（即 下标）为原点，向前，以及向后遍历容器 table（即 ThreadLocalMap 的成员变量）
-            // 找出 并且 “清理” 当前 run（它的含义见该方法上面的注释）中，所有 “不新鲜” 的槽位
+            // 以当前 “不新鲜” 的槽位（即 下标）为原点，向前，以及向后遍历容器 table（即 ThreadLocalMap 的成员变量）
+            // 找出，并且 “清理” 当前 run（它的含义见该方法上面的注释）中，所有 “不新鲜” 的槽位
+            // 同时
+            // 保证所有的元素都在 run 中（即 所有元素紧密排列在一起，处于两个空槽位（即 槽位（即 下标）对应的值为 nll），而两个元素之间没有空槽位）
+            //（相关图可见 TheadLocal 笔记中的 “run”）
 
+            // 第一个 for 循环
             // 以当前 “不新鲜” 的槽位（即 下标）为原点，向前遍历容器 table（即 ThreadLocalMap 的成员变量）
             for (int i = prevIndex(staleSlot, len);
-                 (e = tab[i]) != null;
+                 (e = tab[i]) != null; // for 循环的执行条件（即 遇到空槽位（即 槽位上的元素为 null（即 槽位上没有元素））时，停止循环）
                  i = prevIndex(i, len))
                 // 找到 “不新鲜” 的 Entry 类实例之后，记录下它的槽位（即 下标）
+                // 注意
                 // 如果遍历的过程中遇到多个 “不新鲜” 的 Entry 类实例
                 // 那么
                 // 在该 for 循环结束之后，变量 slotToExpunge 所记录的就是槽位（下标）最小的那个 “不新鲜” 的 Entry 类实例
+                //（也就是当前容器（即 数组）中 第一个 ”不新鲜“ 的 Entry 类实例）
                 if (e.get() == null)
                     slotToExpunge = i;
 
             // Find either the key or trailing null slot of run, whichever
             // occurs first
 
+            // 第二个 for 循环
             // 以当前 “不新鲜” 的槽位（即 下标）为原点，向后遍历容器 table（即 ThreadLocalMap 的成员变量）
-            // 这一步其实是为了完成 set() 方法中那个没有完成的遍历动作
+            //（这一步其实是为了完成 set() 方法中那个没有完成的遍历动作）
             for (int i = nextIndex(staleSlot, len);
-                 (e = tab[i]) != null;
+                 (e = tab[i]) != null; // for 循环的执行条件（即 遇到槽位上的元素为 null（即 槽位上没有元素）时，停止循环）
                  i = nextIndex(i, len)) {
                 // 获取当前 Entry 类实例所指向的 ThreadLocal 类实例
                 ThreadLocal<?> k = e.get();
@@ -808,17 +821,15 @@ public class ThreadLocal<T> {
                     e.value = value;
 
                     // 就是这里进行的元素交换
-                    // 交换完成之后
-                    // 原先 “不新鲜” 的 Entry 类实例所在的槽位，就变成了
-                    // 新的值（即当前调用该 set() 方法所要设置的值（即 当要存放到 ThreadLocal 中的值））转换成一个新的 Entry 类实例了
-                    // 而当前遍历到的槽位（即 tab[i]）里存放的就变成了 “不新鲜” 的 Entry 类实例了
+                    // 交换完成之后，就不会出现容器中有重复元素的情况了
+                    //（具体见 ThreadLocal 笔记中的 “元素交换”）
                     tab[i] = tab[staleSlot];
                     tab[staleSlot] = e;
 
                     // Start expunge at preceding stale entry if it exists
                     // 这里判断这两个变量是否相等
                     // 如果是
-                    // 那么就表示上那个向前遍历的 for 循环没有找到其他的 “不新鲜” 的 Entry 类实例
+                    // 那么就表示上面第一个 for 循环没有找到其他的 “不新鲜” 的 Entry 类实例
                     if (slotToExpunge == staleSlot)
                         // 由于上面进行了元素交换，所以当前 i 所表示的槽位（下标）才是 “不新鲜” 的 Entry 类实例所在下标
                         // 因此
@@ -842,11 +853,29 @@ public class ThreadLocal<T> {
                 // If we didn't find stale entry on backward scan, the
                 // first stale entry seen while scanning for key is the
                 // first still present in the run.
+                // 代码走到这里表示，上面第一个 for 循环没有找到其他的 “不新鲜” 的 Entry 类实例
+                //（所以，此时这个 if 判断中有 slotToExpunge == staleSlot）
+                // 并且
+                // 在当前这个 for 循环中找到了第二个 “不新鲜” 的 Entry 类实例（就是这个 if 判断中的 k == null）
+                // 此时
+                // 这个 if 语句中就会把当前遍历到的这个第二个 “不新鲜” 的 Entry 类实例所在下标赋值给变量 slotToExpunge
+                // 因为
+                // 下面的代码中，会把我们此时要存放的新值直接放到第一个 “不新鲜” 的 Entry 类实例所在的槽位上了
+                // 所以
+                // 用于记录 “不新鲜” 的 Entry 类实例所在槽位的变量 slotToExpunge 的值就要变成这个第二个 “不新鲜” 的 Entry 类实例所在下标了
+
+                // 注意
+                // 这个 if 判断只会走一次，因为 if 判断中有 slotToExpunge == staleSlot 这个判断
+                // 所以
+                // 一旦变量 slotToExpunge 的值发生了改变，这个判断就不再满足了
+                // 这也就保证了变量 slotToExpunge 所指向的下标永远都是一个 “不新鲜” 的 Entry 类实例所在的槽位
+                //（对于此时来说，虽然看上去是第二个，但是一旦下面把要存放的新值直接放到第一个 “不新鲜” 的 Entry 类实例所在的槽位上之后，就会变成第一个了）
                 if (k == null && slotToExpunge == staleSlot)
                     slotToExpunge = i;
             }
 
             // If key not found, put new entry in stale slot
+            // 把要存放的新值直接放到第一个 “不新鲜” 的 Entry 类实例所在的槽位上
             tab[staleSlot].value = null;
             tab[staleSlot] = new Entry(key, value);
 
@@ -877,6 +906,7 @@ public class ThreadLocal<T> {
             int len = tab.length;
 
             // expunge entry at staleSlot
+
             // “清理” 当前 “不新鲜” 的 Entry 类实例
             // 即
             // 把它的 Value（即 存放在 ThreadLocal 中的那个变量）置为 null（以便后期 GC 时回收该对象）
@@ -892,7 +922,9 @@ public class ThreadLocal<T> {
 
             // 该 for 循环用于遍历从当前槽位（即 形参 staleSlot 所对应的下标）开始，到下一个元素为 null 的槽位之间的子数组中的所有元素
             // 清理该范围内的所有 “不新鲜” 的 Entry 类实例
-            for (i = nextIndex(staleSlot, len); (e = tab[i]) != null; i = nextIndex(i, len)) {
+            for (i = nextIndex(staleSlot, len);
+                 (e = tab[i]) != null; // for 循环的执行条件（即 遇到空槽位（即 槽位上的元素为 null（即 槽位上没有元素））时，停止循环）
+                 i = nextIndex(i, len)) {
                 // 获取当前 Entry 类实例所指向的 ThreadLocal 类实例
                 ThreadLocal<?> k = e.get();
 
@@ -924,6 +956,8 @@ public class ThreadLocal<T> {
                     }
                 }
             }
+
+            // 返回的 i 就是上面 for 循环遍历结束时，所指向的那个空槽位（即 槽位上的元素为 null（即 该 i 所表示的下标的值为 null））
             return i;
         }
 
@@ -935,6 +969,23 @@ public class ThreadLocal<T> {
          * scanning (fast but retains garbage) and a number of scans
          * proportional to number of elements, that would find all
          * garbage but would cause some insertions to take O(n) time.
+         *
+         * 上面的注释含义大致如下
+         *
+         * 试探性地扫描（即 线性探测）一些房间（即 槽位）来查找 “不新鲜” 的 Entry 类实例
+         * 该方法会在有新元素被添加进来（即 我们调用 ThreadLocal 类的 set() 方法来设置需要线程隔离的变量）时
+         * 或者
+         * 一个 “不新鲜” 的 Entry 类实例被清除时，被触发
+         * 该方法执行对 “对数级别数量”（其实就是 除以 2 向下取整）的元素进行扫描
+         * 作为
+         * 不扫描元素（这种方式虽然快，但是会存在垃圾（即 “不新鲜” 的 Entry 类实例））
+         * 以及
+         * 按比例地扫描（容器中的（即 成员变量 table））元素（即 扫描容器中的所有元素）（既然是扫描所有元素，那么就相对是耗时的）
+         * 这两种策略权衡之后的策略
+         * 这种策略能找到所有的垃圾（即 “不新鲜” 的 Entry 类实例）
+         * 但是在进行插入操作（即 我们调用 ThreadLocal 类的 set() 方法来设置需要线程隔离的变量）时
+         * 该策略有 O(n) 的时间复杂度
+         *
          *
          * @param i a position known NOT to hold a stale entry. The
          * scan starts at the element after i.
@@ -952,7 +1003,9 @@ public class ThreadLocal<T> {
          * @return true if any stale entries have been removed.
          */
         private boolean cleanSomeSlots(int i, int n) {
+            // 该标识符用于判断是不是所有的 “不新鲜” 的 Entry 类实例都被清空了
             boolean removed = false;
+
             Entry[] tab = table;
             int len = tab.length;
             do {
@@ -963,7 +1016,12 @@ public class ThreadLocal<T> {
                     removed = true;
                     i = expungeStaleEntry(i);
                 }
-            } while ( (n >>>= 1) != 0);
+            } while ( (n >>>= 1) != 0); // 没循环一次都会进行一次位运算，n 会逐渐变小
+            // 这里 n >>>= 1 这个位运算等价于 n = floor(n / 2)（除 2 向下取整）
+            //（这里 n 是正数的情况下，是上面的这个等价运算（因为 >>> 为无符号右移，如果负数使用该位运算符，得到的就是正数了）
+            // 正是因为这一步没有全量遍历（扫描）容器，所以会有概率产生一些 “不新鲜” 的 Entry 类实例无法被清理的情况
+            // 才是导致使用 ThreadLocal 会导致内存泄漏的原因
+
             return removed;
         }
 
