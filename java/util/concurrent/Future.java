@@ -109,6 +109,23 @@ public interface Future<V> {
      * always return {@code true}.  Subsequent calls to {@link #isCancelled}
      * will always return {@code true} if this method returned {@code true}.
      *
+     * 上面注释的含义为
+     * 该方法用于尝试取消该 Future<V> 接口所对应的 Callable<V> 接口中的 call() 方法（即 线程任务）的执行
+     * 如果
+     * 该线程任务已经完成、或者 已经被取消、或者 因为某些原因不能被取消（具体是什么原因，待查）
+     * 该方法将调用失败（即 该 cancel() 方法将返回 false）
+     *（其他情况下，如线程任务被成功取消，该 cancel() 方法将返回 true）
+     * 如果
+     * 调用该方法的时候该线程任务还没有执行，那么该线程任务将不会再被执行
+     * 如果
+     * 该线程任务已经开始执行了，那么该方法的形参 mayInterruptIfRunning 将会决定该线程任务是否会被中断
+     *（即 Callable<V> 接口中的 call() 方法是否会抛出 InterruptedException 异常）
+     *
+     * 在该方法调用之后，再调用该 Future<V> 接口中的 isDone() 方法时，isDone() 方法将返回 true
+     * 同时
+     * 当该 cancel() 方法返回 true 时，再调用该 Future<V> 接口中的 isCancelled() 方法时将返回 true
+     *
+     *
      * @param mayInterruptIfRunning {@code true} if the thread executing this
      * task should be interrupted; otherwise, in-progress tasks are allowed
      * to complete
