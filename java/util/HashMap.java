@@ -231,6 +231,15 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The default initial capacity - MUST be a power of two.
+     *
+     * 该成员变量表示数组（即 成员变量 table）的初始容量（即 数组的长度）为 16
+     *（这里使用了位运算，要比直接写 16 的效率要高）
+     *
+     * 注意
+     * 该数组的长度必须为 2 的幂（即 2 的倍数（即 偶数））（具体可见 resize() 这个扩容方法）
+     * 因为
+     * 如果长度为奇数的话，会导致哈希冲突的概率增加（原因待查）
+     * 至于为什么初始容量为 16，这应该是个经验值（具体为什么，还没找到原因）
      */
     static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
 
@@ -238,11 +247,32 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * The maximum capacity, used if a higher value is implicitly specified
      * by either of the constructors with arguments.
      * MUST be a power of two <= 1<<30.
+     *
+     * 该成员变量表示数组（即 成员变量 table）的最大容量（即 数组的长度）为 2 的 30 次方
+     * 当数组的长度达到这个值的时候，数组将不再扩容
+     * 其实
+     * 我估计在达到这个值之前，JVM 已经报 OOM 了
      */
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
     /**
      * The load factor used when none specified in constructor.
+     * 该成员变量表示数组（即 成员变量 table）的负载因子
+     * 即
+     * 当数组中的元素的数量达到 数组长度（即 length）* 负载因子（即 0.75）（如 16 * 0.75）时
+     * 该数组就会进行扩容（即 调用 resize() 方法）
+     *
+     * 注意
+     * 之所以是 0.75，这个是对效率进行权衡后的值
+     * 如果是 1
+     * 那么
+     * 表示只有当数组被完成填充满了（即 数组中元素的数量已经达到了数组的长度），才会进行扩容
+     * 这个时候哈希冲突的概率会大大增加（即 数组中元素的数量在逼近数组的最大容量（长度）时，哈希冲突的概率会大大增加）
+     * 这就会影响 HashMap 的性能
+     *
+     * 如果是 0.5
+     * 那么
+     * 当数组中元素只达到数组最大容量的一半时就进行扩容，这个会导致数组的利用率不高
      */
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
@@ -253,6 +283,17 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * than 2 and should be at least 8 to mesh with assumptions in
      * tree removal about conversion back to plain bins upon
      * shrinkage.
+     *
+     * 该成员变量表示桶（即 数组（即 成员变量 table）的槽位）中链表转为红黑树的阈值为 8
+     * 即
+     * 当桶（即 数组（即 成员变量 table）的槽位）中链表的长度达到 8 的时候
+     * 该就会把该链表转为红黑树
+     * 但是
+     * 由于在 HashMap 容器中存放的元素（即 键值对）是满足泊松分布的
+     *（这个是通过 HashMap 类中的哈希运算规则（见 hash() 方法）推断出的）
+     * 因此
+     * 某个桶（即 数组（即 成员变量 table）的槽位）中链表的长度达到 8 的概率为 0.00000006
+     * 这个概率是几乎不可能达到的（具体可见成员变量 DEFAULT_INITIAL_CAPACITY 上面的那一大段注释）
      */
     static final int TREEIFY_THRESHOLD = 8;
 
@@ -260,6 +301,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * The bin count threshold for untreeifying a (split) bin during a
      * resize operation. Should be less than TREEIFY_THRESHOLD, and at
      * most 6 to mesh with shrinkage detection under removal.
+     *
+     * 该成员变量表示桶（即 数组（即 成员变量 table）的槽位）中红黑树转为链表的阈值为 6
+     * 即
+     * 当桶（即 数组（即 成员变量 table）的槽位）中红黑树的节点个数小于 6 时，就会把该红黑树转为链表
+     * 注意
+     * 之所以不直接使用上面的转树阈值（TREEIFY_THRESHOLD），是因为如果转树阈值和转链表阈值一样的话，会导致频繁的转换，所以要错开一些
+     *（即 链表长度大于 8 时就转红黑树，小于 8 时就转链表，这个太频繁了）
      */
     static final int UNTREEIFY_THRESHOLD = 6;
 
@@ -268,6 +316,17 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * (Otherwise the table is resized if too many nodes in a bin.)
      * Should be at least 4 * TREEIFY_THRESHOLD to avoid conflicts
      * between resizing and treeification thresholds.
+     *
+     * 该成员变量表示最小树化阈值为 64（为什么是 64 这个值，我觉得是经验值，具体待查）
+     * 即
+     * 当数组（即 成员变量 table）的槽位）的长度（即 数组的容器）小于 64 时
+     * 那么
+     * 即使某个桶（即 数组（即 成员变量 table）的槽位）中链表的长度大于 8，该链表也不会转变为红黑树
+     * 同时
+     * 一旦数组（即 成员变量 table）的槽位）的长度（即 数组的容器）大于 64
+     * 那么
+     * 数组中所有桶（即 数组（即 成员变量 table）的槽位）中链表的长度大于 8 的链表都会转为红黑树
+     *（具体见 treeifyBin() 方法）
      */
     static final int MIN_TREEIFY_CAPACITY = 64;
 
@@ -276,9 +335,24 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * TreeNode subclass, and in LinkedHashMap for its Entry subclass.)
      */
     static class Node<K,V> implements Map.Entry<K,V> {
+        // 该成员变量用于存放键值对中的键（Key）的哈希值（该哈希值的计算见 put() 方法）
+        // 即
+        // 我们在调用 HashMap 的 put() 方法存放键值对时，该 put() 方法内部会对键（Key）计算哈希值
         final int hash;
+
+        // 该成员变量变量存放的是键（Key）
+        // 即
+        // 我们在调用 HashMap 的 put() 方法存放键值对时，我们的键（Key）最终就是赋值给该成员变量的
+        //（具体见 put() 方法）
         final K key;
+
+        // 该成员变量变量存放的是值（Value）
+        // 即
+        // 我们在调用 HashMap 的 put() 方法存放键值对时，我们的值（Value）最终就是赋值给该成员变量的
+        //（具体见 put() 方法）
         V value;
+
+        // 该成员变量存放的是下一个 Node 类实例的引用（它的功能相当于指针）
         Node<K,V> next;
 
         Node(int hash, K key, V value, Node<K,V> next) {
@@ -288,14 +362,26 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             this.next = next;
         }
 
+        // 下面两个方法就是成员变量 Key 和 Value 的 get 方法
+        // 但是
+        // 由于该 Node<K,V> 类是 HashMap<K,V> 类的内部类
+        // 因此
+        // 我们在通过调用 HashMap<K,V> 类中的 get() 方法获取指定键（Key）的值（Value）时
+        // 该 get() 方法内部是直接通过 . 的方式来获取成员变量 value 的（如 map.value），而不是通过该 get 方法获取的
+        // 因此
+        // 这两个 get 方法是供其他类使用该 Node<K,V> 类时用的
         public final K getKey()        { return key; }
         public final V getValue()      { return value; }
+
         public final String toString() { return key + "=" + value; }
 
+        // 该方法用于计算当前这个 Node<K,V> 类实例本身的哈希值
         public final int hashCode() {
+            // 该哈希值的计算方式就是对键（Key）和值（Value）进行异或运算（为什么要用异或，待查）
             return Objects.hashCode(key) ^ Objects.hashCode(value);
         }
 
+        // 该方法是成员变量 value 的 set 方法（该方法在 HashMap 类内部没有用到）
         public final V setValue(V newValue) {
             V oldValue = value;
             value = newValue;
@@ -391,6 +477,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * necessary. When allocated, length is always a power of two.
      * (We also tolerate length zero in some operations to allow
      * bootstrapping mechanics that are currently not needed.)
+     *
+     * 该成员变量就是该 HashMap 类的存储结构（数组 + 链表 / 数组 + 红黑树）中的数组
+     *（具体可见 HashMap 类笔记）
      */
     transient Node<K,V>[] table;
 
@@ -1797,9 +1886,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * linked node.
      */
     static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+        // 父节点
         TreeNode<K,V> parent;  // red-black tree links
+
+        // 左叶子节点
         TreeNode<K,V> left;
+        // 右叶子节点
         TreeNode<K,V> right;
+
         TreeNode<K,V> prev;    // needed to unlink next upon deletion
         boolean red;
         TreeNode(int hash, K key, V val, Node<K,V> next) {
