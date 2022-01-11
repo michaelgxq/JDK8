@@ -459,9 +459,37 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * Returns a power of two size for the given target capacity.
+     * 该方法用于返回比形参 cap 接收的数的大的，同时又是距离形参 cap 接收的数最近的那个 2 的幂
+     * 如
+     * 如果形参 cap 的值为 7，该方法将返回 8
+     * 如果形参 cap 的值为 20，该方法将返回 32
+     * 如果形参的值为 8（它本身就是 2 的幂），该方法就返回 8
+     *
+     * 其实
+     * 由于 2 的幂用二进制表示就是最高位为 1，其余位为 0（如 100，1000 等）
+     * 因此
+     * 该方法中的一系列的位运算的目的就是
+     * 把形参 cap 接收的值的 “二进制形式” 下的位数都变为 1（而这个所有位都是 1 的二进制数，就是 2 的幂的前一个数）
+     * 然后
+     * 最后再对这个数加 1，就变成 2 的幂了
+     *
+     * 即如
+     * 12 的二进制值为 1100，经过下面一系列的位操作之后，最后就变成了 1111（而 1111 就是 15，它是 2 的 4 次幂 16 的前一个数）
+     * 然后
+     * 再对 1111 + 1，就变成 10000（即 16）了
+     *
+     * 注意
+     * 下面的代码中，需要先对形参 cap - 1 是为了保证如果形参 cap 接收的值为 2 的幂本身，那么该方法返回的就是该 2 的幂本身
+     * 否则
+     * 如果不减去 1
+     * 那么
+     * 如果形参 cap 接收的值为 2 的幂本身，该方法就将返回下一个 2 的幂了（即 如果传入的是 8，该方法将返回 16）
+     * 至于原因，自己算一下就知道了
+     *（如 16 对应的是 10000，不减 1，把它所有位变为 1，就是 11111，然后再加 1，就是 100000，那就是下一个 2 的幂了）
      */
     static final int tableSizeFor(int cap) {
         int n = cap - 1;
+        // 下面总共无符号右移了 31 位（bit）（int 类型占用的内存就是 4 个字节（即 32 位（bit）））
         n |= n >>> 1;
         n |= n >>> 2;
         n |= n >>> 4;
@@ -491,6 +519,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The number of key-value mappings contained in this map.
+     * 该成员变量用于记录当前 HashMap 容器中有多少键值对
      */
     transient int size;
 
@@ -500,12 +529,34 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * the HashMap or otherwise modify its internal structure (e.g.,
      * rehash).  This field is used to make iterators on Collection-views of
      * the HashMap fail-fast.  (See ConcurrentModificationException).
+     *
+     * 该成员变量用于记录当前这个 HashMap 容器发生结构性改变的次数
+     *（结构性变化包括，往 HashMap 容器中存入一个新的键值对（对原有键值对进行覆盖操作不算），删除一个键值对，链表转树，树转链表等）
+     *
+     * 由于
+     * HashMap 容器不是线程安全的
+     * 因此
+     * 当我们在遍历 HashMap 容器的过程中，可能容器的键值对会被其他线程修改
+     *（即 本来应该遍历 13 个键值对，但是，在遍历的过程中，该容器被其他线程删掉了一个键值对，导致遍历的结果变成了 12 个，而不是我们预期的 13 个）
+     * 为了避免这种情况发生，就需要使用该成员变量
+     * 即
+     * 当在使用迭代器（即 Iterator 类实例）对 HashMap 容器进行遍历时
+     * 在迭代器（即 Iterator 类实例）初始化过程中，会将该成员变量值赋给迭代器（即 Iterator 类实例）的 expectedModCount 成员变量
+     * 并且
+     * 在迭代过程中，会不断判断该 modCount 成员变量的值跟 expectedModCount 变量的值是否相等
+     * 如果不相等就表示已经有其他线程修改了该 HashMap 容器
+     * 此时
+     * 就会直接抛出 ConcurrentModificationException 异常，阻止进一步的遍历
+     * 这就是所谓的快速失败策略（即 fail-fast）
+     *（具体可见该 HashMap 类的内部类 --- HashIterator 类中的 nextNode() 方法）
      */
     transient int modCount;
 
     /**
      * The next size value at which to resize (capacity * load factor).
      *
+     * 该成员变量用于记录进行下一次数组（即 成员变量 table）扩容的阈值
+     *（即 当前数组容量 * 负载因子（即 成员变量 loadFactor））
      * @serial
      */
     // (The javadoc description is true upon serialization.
@@ -517,6 +568,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * The load factor for the hash table.
      *
+     * 该成员变量用于记录数组（即 成员变量 table）扩容所需的负载因子
+     *（如果我们没有显性地指定负载因子，那么，该成员变量的值就是默认的负载因子（即 成员变量 DEFAULT_LOAD_FACTOR）0.75）
      * @serial
      */
     final float loadFactor;
@@ -527,21 +580,41 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * Constructs an empty <tt>HashMap</tt> with the specified initial
      * capacity and load factor.
      *
-     * @param  initialCapacity the initial capacity
-     * @param  loadFactor      the load factor
+     * 注意
+     * 虽说我们可以通过该构造方法设置容器的初始容量（大小）
+     * 但是
+     * 如果我们设置的这个初始容器大小（即 形参 initialCapacity）不是 2 的幂
+     * 那么
+     * HashMap 就会直接使用离该值最近的那个 2 的幂作为容器的初始大小
+     *（可以结合 resize() 方法一起看）
+     *
+     * @param  initialCapacity the initial capacity 容器（即成员变量 table）的初始容量（大小）
+     * @param  loadFactor      the load factor 负载因子
      * @throws IllegalArgumentException if the initial capacity is negative
      *         or the load factor is nonpositive
      */
     public HashMap(int initialCapacity, float loadFactor) {
+        // 如果形参 initialCapacity 接收的值小于 0，直接抛异常
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " +
                                                initialCapacity);
+
+        // 如果形参 initialCapacity 接收的值大于容器最大容量（大小），直接把形参 initialCapacity 设置成容器最大容量
         if (initialCapacity > MAXIMUM_CAPACITY)
             initialCapacity = MAXIMUM_CAPACITY;
+
+        // 对形参 loadFactor 接收的值的异常情况进行判断
         if (loadFactor <= 0 || Float.isNaN(loadFactor))
-            throw new IllegalArgumentException("Illegal load factor: " +
-                                               loadFactor);
+            throw new IllegalArgumentException("Illegal load factor: " + loadFactor);
+
         this.loadFactor = loadFactor;
+
+        // 调用 tableSizeFor() 方法，返回离形参 initialCapacity 接收的值最近的那个 2 的幂作为扩容的阈值
+        // 最终在 resize() 方法中，会用该成员变量 threshold 作为初始容器大小来创建容器（即 成员变量 table）
+        // 因此
+        // 除非形参 initialCapacity 接收的值（即 我们传入该构造方法的值）就是 2 的幂
+        // 否则真实的容器初始容量不可能是形参 initialCapacity 接收的值
+        //（可以结合该 tableSizeFor() 方法和 resize() 方法一起看）
         this.threshold = tableSizeFor(initialCapacity);
     }
 
@@ -553,6 +626,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @throws IllegalArgumentException if the initial capacity is negative.
      */
     public HashMap(int initialCapacity) {
+        // 这里就是调用的上面的 HashMap(int initialCapacity, float loadFactor) 这个构造方法
         this(initialCapacity, DEFAULT_LOAD_FACTOR);
     }
 
@@ -561,6 +635,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * (16) and the default load factor (0.75).
      */
     public HashMap() {
+        // 设置负载因子
         this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
     }
 
@@ -712,9 +787,23 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
-        Node<K,V>[] tab; Node<K,V> p; int n, i;
+        // 创建一些变量
+        Node<K,V>[] tab;
+        Node<K,V> p;
+        int n, i;
+
+        // 把成员变量 table（即 容器）赋值给变量 tab，然后判断是否为 null
+        // 如果变量 tab 为 null（其实就是成员变量 table（即 容器）为 null）
+        // 或者
+        // 变量的长度为 0（其实就是成员变量 table（即 容器）的长度为 0）
+        // 那么
+        // 这个就表示当前是第一次调用 put() 方法让容器中存放键值对（或者是调用了 remove() 方法删除了 HashMap 容器中的所有元素）
         if ((tab = table) == null || (n = tab.length) == 0)
+            // 调用 resize() 方法创建一个容器（即 成员变量 table）并把容器的大小赋值给成员变量 n
+            //（对于调用了 remove() 方法删除了 HashMap 容器中的所有元素的情况，resize() 方法将直接返回现有的容器）
             n = (tab = resize()).length;
+
+
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
         else {
@@ -746,10 +835,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                 return oldValue;
             }
         }
+
         ++modCount;
+
         if (++size > threshold)
             resize();
+
         afterNodeInsertion(evict);
+
         return null;
     }
 
@@ -760,36 +853,73 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * elements from each bin must either stay at same index, or move
      * with a power of two offset in the new table.
      *
+     * 上面注释的含义为
+     * 初始化（即 创建）容器（即 成员变量 table）或者把容器（即 成员变量 table）扩容一倍
+     * 如果容器（即 成员变量 table）为 null（即 当前还没有容器）
+     * 那么
+     * 就使用成员变量 threshold（即 阈值）作为初始容器大小来创建一个容器
+     * 其他情况下（其实就是指扩容的情况）
+     * 把当前容器的大小直接扩容一倍，此时，容器中的元素要么保持原位，或者，会发生 2 的幂的偏移
+     *（即 原槽位上的元素会转移到下一个 2 的幂距离的槽位上）（具体怎么样，待研究）
+     *
+     * 注意
+     * 该方法只有在两种情况下会被调用
+     * 即
+     * 1. 第一次调用 put() 方法往 HashMap 容器中存放元素时，需要创建容器（即 成员变量 table）
+     * 2. 容器（即 成员变量 table）的大小达到阈值，需要扩容
+     *
      * @return the table
      */
     final Node<K,V>[] resize() {
+        // 把成员变量 table （容器）赋值给变量 oldTab
         Node<K,V>[] oldTab = table;
+
+        // 把容器（即 成员变量 table ）的大小赋值给变量 oldCap
         int oldCap = (oldTab == null) ? 0 : oldTab.length;
+
+        // 把成员变量 threshold（即 阈值）赋值给变量 oldThr
         int oldThr = threshold;
+
         int newCap, newThr = 0;
+
+        // 如果走了这个 if 语句，表示当前容器（即 成员变量 table）以及存在了（即 我们已经不是第一次调用 put() 方法往容器中存放键值对了）
         if (oldCap > 0) {
             if (oldCap >= MAXIMUM_CAPACITY) {
                 threshold = Integer.MAX_VALUE;
                 return oldTab;
             }
+            // if 语句中的位运算表示把 oldCap 的值翻一倍（即 * 2）
             else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY &&
                      oldCap >= DEFAULT_INITIAL_CAPACITY)
+                // 该位运算表示把 oldThr 的值翻一倍（即 * 2）
                 newThr = oldThr << 1; // double threshold
         }
+        // 如果走的是这个表示是第一次调用 put() 方法往 HashMap 容器中存放元素
+        // 并且
+        // 在创建 HashMap 类实例时，调用的是有参构造方法（因为成员变量 threshold 的值不为 0（具体可见那三个有参构造方法））
         else if (oldThr > 0) // initial capacity was placed in threshold
             newCap = oldThr;
+        // 如果走的是这个表示是第一次调用 put() 方法往 HashMap 容器中存放元素
+        // 并且
+        // 在创建 HashMap 类实例时，调用的是无参构造方法（因为成员变量 threshold 的值为 0（具体可见那无参构造方法））
         else {               // zero initial threshold signifies using defaults
             newCap = DEFAULT_INITIAL_CAPACITY;
             newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
         }
+
+        // 如果走的是上面的 else if (oldThr > 0)，那么就会走这个 if
         if (newThr == 0) {
             float ft = (float)newCap * loadFactor;
             newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ?
                       (int)ft : Integer.MAX_VALUE);
         }
         threshold = newThr;
+
+        // 这一步就是创建容器（即 成员变量 table）（即 创建一个元素）
         @SuppressWarnings({"rawtypes","unchecked"})
             Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
+
+
         table = newTab;
         if (oldTab != null) {
             for (int j = 0; j < oldCap; ++j) {

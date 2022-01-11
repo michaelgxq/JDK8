@@ -88,7 +88,8 @@ public class ThreadLocal<T> {
      * The next hash code to be given out. Updated atomically. Starts at
      * zero.
      *
-     * 该成员变量是一个静态成员变量，因此，该成员变量的值是当前线程中所有 ThreadLocal 类使用共用的
+     * 该成员变量存放的是下一次进行哈希运算的基数，该基数的初始值是 0（即 new AtomicInteger();）
+     *（该成员变量是一个静态成员变量，因此，该成员变量的值是当前线程中所有 ThreadLocal 类实例共用的）
      */
     private static AtomicInteger nextHashCode =
         new AtomicInteger();
