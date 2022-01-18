@@ -421,6 +421,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     static final int hash(Object key) {
         int h;
+        // 使用键（Key）的哈希值（即 调用 Object 类中的 hashCode() 方法获取的）与该哈希值的高 16 位进行异或运算
+        //（具体见 HashMap 笔记中的 “哈希运算（异或）”）
         return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
     }
 
@@ -459,6 +461,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * Returns a power of two size for the given target capacity.
+     *
      * 该方法用于返回比形参 cap 接收的数的大的，同时又是距离形参 cap 接收的数最近的那个 2 的幂
      * 如
      * 如果形参 cap 的值为 7，该方法将返回 8
@@ -469,12 +472,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * 由于 2 的幂用二进制表示就是最高位为 1，其余位为 0（如 100，1000 等）
      * 因此
      * 该方法中的一系列的位运算的目的就是
-     * 把形参 cap 接收的值的 “二进制形式” 下的位数都变为 1（而这个所有位都是 1 的二进制数，就是 2 的幂的前一个数）
+     * 把形参 cap 接收的值的 “二进制形式” 下的位数都变为 1
+     *（而这个所有位都是 1 的二进制数，就是 2 的幂的前一个数（即 2 的幂 - 1））
      * 然后
      * 最后再对这个数加 1，就变成 2 的幂了
      *
      * 即如
-     * 12 的二进制值为 1100，经过下面一系列的位操作之后，最后就变成了 1111（而 1111 就是 15，它是 2 的 4 次幂 16 的前一个数）
+     * 12 的二进制值为 1100，经过下面一系列的位操作之后，最后就变成了 1111
+     *（而 1111 就是 15，它是 2 的 4 次幂 16 的前一个数（即 4 的幂 - 1））
      * 然后
      * 再对 1111 + 1，就变成 10000（即 16）了
      *
@@ -772,6 +777,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      *         previously associated <tt>null</tt> with <tt>key</tt>.)
      */
     public V put(K key, V value) {
+        // 调用 putVal() 方法
+        // 这里首先会调用 hash() 方法对键（Key）进行哈希运算
         return putVal(hash(key), key, value, false, true);
     }
 
@@ -803,30 +810,71 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             //（对于调用了 remove() 方法删除了 HashMap 容器中的所有元素的情况，resize() 方法将直接返回现有的容器）
             n = (tab = resize()).length;
 
-
+        // 使用键（Key）的哈希值，和容器（即 成员变量 table 数组）的大小进行取模运算
+        //（即 下面 if 语句中的 (n - 1) & hash）
+        // 以获取当前元素（即 键值对）在容器中的存放位置（即 槽位 / 下标）
+        //（在 HashMap 中，槽位也叫 “桶”（具体见 HashMap 笔记中的 “Java 7 中的存储结构”））
+        //（具体见 HashMap 笔记中的 “哈希运算（取模）”）
         if ((p = tab[i = (n - 1) & hash]) == null)
+            // 如果走到这个 if 语句当中
+            // 说明当前槽位为空，（即 当前这个元素（键值对）在容器中没有产生哈希冲突）
+            // 那么
+            // 就直接往该槽位中存放键值对（即 Node 类实例）
             tab[i] = newNode(hash, key, value, null);
         else {
-            Node<K,V> e; K k;
+            // 如果走到这个 else 当中，那么就表示当前这个槽位上已经存放有元素了（即 键值对（即 Node 类实例））也就是产生了 “哈希冲突”
+            Node<K,V> e;
+            K k;
+
+            // 这个 if 用于判断当前我们调用 put() 方法存入的键值对，和当前这个槽位上的键值对的键（Key）是否相等
+            // 如果相等
+            // 就表示我们当前往 HashMap 容器中存放键值对的操作是替换原有键值对的值（Value）的操作）
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 e = p;
+
             else if (p instanceof TreeNode)
+                // 走到这个 else if 时，表示当前调用 put() 方法存入的键值对，和当前这个槽位上的键值对不是同一个
+                // 并且
+                // 当前这个槽位上挂着的是 “红黑树”（因为 p 的数据类型是 TreeNode 内部类）
+                //（由于此时这个槽位上已经挂着多个元素（键值对）了，因此这个槽位也可以看做 “桶”）
+                // 因此
+                // 这里就调用 TreeNode 内部类中的 putTreeVal() 方法，采用红黑树的方式，往树中放入元素（即 键值对（Node 类实例））
+                //（如果红黑树中存在和我们当前要存入的键值对相同的键值对，该 putTreeVal() 方法将返回该键值对）
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
             else {
+                // 走到这个 else 时，表示当前调用 put() 方法存入的键值对，和当前这个槽位上的键值对不是同一个
+                // 并且
+                // 当前这个槽位上挂着的是 “链表”（因为 p 的数据类型 “不是” TreeNode 内部类）
+                //（由于此时这个槽位上已经挂着多个元素（键值对）了，因此这个槽位也可以看做 “桶”）
+                // 因此
+                // 这里就直接往链表中存放元素（即 键值对（Node 类实例））
                 for (int binCount = 0; ; ++binCount) {
                     if ((e = p.next) == null) {
                         p.next = newNode(hash, key, value, null);
+                        // 树化操作
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
                             treeifyBin(tab, hash);
                         break;
                     }
+                    // 上面的 if 语句只是对槽位上的第一个元素（当代码执行到这里的时候，那个第一个元素就是链表头）
+                    // 判断该元素（键值对）是否和我们此时调用 put() 方法往容器中存放的键值对是否是同一个
+                    // 这里的 if 判断的是链表中是否存在和我们此时要放入的键值对相同的键值对
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
+
+                    // 把当前链表中的节点赋值给变量 p，以便获取下一个节点
                     p = e;
                 }
             }
+
+            // 当走到这个 if 判断里面去的时候（即 e 不为空）
+            // 就表示
+            // 当前 HashMap 容器中存在和我们此时需要存放的键值对相同的键值对
+            //（即 要么是当前这个槽位上就是这个相同的键值对，要么就是就红黑树中有相同的键值对，要么就是链表中有相同的键值对）
+            // 此时
+            // 就会把我们此时调用 put() 方法传入的键（Value）替换掉老的键（Value）
             if (e != null) { // existing mapping for key
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
@@ -838,6 +886,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
         ++modCount;
 
+        // 扩容操作
         if (++size > threshold)
             resize();
 
@@ -921,6 +970,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
 
         table = newTab;
+        // 如果 oldTab 不为空，即表示当前存在容器（即 成员变量 table 数组）
+        // 即
+        // 此时调用该方法的目的是为了给容器（即 成员变量 table 数组）扩容
+        //（下面就是链表和红黑数的操作，就不具体写注释了，以后可以再补充）
         if (oldTab != null) {
             for (int j = 0; j < oldCap; ++j) {
                 Node<K,V> e;
