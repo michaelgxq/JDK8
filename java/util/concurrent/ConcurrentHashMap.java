@@ -39,37 +39,11 @@ import java.io.ObjectStreamField;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.Spliterator;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ForkJoinPool;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
-import java.util.function.DoubleBinaryOperator;
-import java.util.function.Function;
-import java.util.function.IntBinaryOperator;
-import java.util.function.LongBinaryOperator;
-import java.util.function.ToDoubleBiFunction;
-import java.util.function.ToDoubleFunction;
-import java.util.function.ToIntBiFunction;
-import java.util.function.ToIntFunction;
-import java.util.function.ToLongBiFunction;
-import java.util.function.ToLongFunction;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 /**
@@ -698,10 +672,26 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * exported).  Otherwise, keys and vals are never null.
      */
     static class Node<K,V> implements Map.Entry<K,V> {
+        // 该成员变量用于存放键值对中的键（Key）的哈希值（该哈希值的计算见 put() 方法）
+        // 即
+        // 我们在调用 HashMap 的 put() 方法存放键值对时，该 put() 方法内部会对键（Key）计算哈希值
         final int hash;
+
+        // 该成员变量变量存放的是键（Key）
+        // 即
+        // 我们在调用 HashMap 的 put() 方法存放键值对时，我们的键（Key）最终就是赋值给该成员变量的
+        //（具体见 put() 方法）
         final K key;
+
+        // 该成员变量变量存放的是值（Value）
+        // 即
+        // 我们在调用 HashMap 的 put() 方法存放键值对时，我们的值（Value）最终就是赋值给该成员变量的
+        //（具体见 put() 方法）
         volatile V val;
+
+        // 该成员变量存放的是下一个 Node 类实例的引用（它的功能相当于指针）
         volatile Node<K,V> next;
+
 
         Node(int hash, K key, V val, Node<K,V> next) {
             this.hash = hash;
@@ -2758,9 +2748,16 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * Nodes for use in TreeBins
      */
     static final class TreeNode<K,V> extends Node<K,V> {
+        // 父节点
         TreeNode<K,V> parent;  // red-black tree links
+
+        // 左叶子节点
         TreeNode<K,V> left;
+
+        // 右叶子节点
         TreeNode<K,V> right;
+
+
         TreeNode<K,V> prev;    // needed to unlink next upon deletion
         boolean red;
 

@@ -238,7 +238,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * 注意
      * 该数组的长度必须为 2 的幂（即 2 的倍数（即 偶数））（具体可见 resize() 这个扩容方法）
      * 因为
-     * 如果长度为奇数的话，会导致哈希冲突的概率增加（原因待查）
+     * 如果长度为奇数的话，会导致哈希冲突的概率增加（具体见 HashMap 笔记中的 “容器的大小是 2 的幂的原因”）
      * 至于为什么初始容量为 16，这应该是个经验值（具体为什么，还没找到原因）
      */
     static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
@@ -968,8 +968,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         @SuppressWarnings({"rawtypes","unchecked"})
             Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
 
-
         table = newTab;
+
         // 如果 oldTab 不为空，即表示当前存在容器（即 成员变量 table 数组）
         // 即
         // 此时调用该方法的目的是为了给容器（即 成员变量 table 数组）扩容
@@ -1022,6 +1022,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * Replaces all linked nodes in bin at index for given hash unless
      * table is too small, in which case resizes instead.
+     *
+     * 该方法用于将容器（成员变量 table 数组）中槽位上挂着的链表转为红黑树
      */
     final void treeifyBin(Node<K,V>[] tab, int hash) {
         int n, index; Node<K,V> e;
@@ -2074,6 +2076,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
         // 左叶子节点
         TreeNode<K,V> left;
+
         // 右叶子节点
         TreeNode<K,V> right;
 
