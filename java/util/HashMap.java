@@ -44,6 +44,15 @@ import java.util.function.Function;
  * the order of the map; in particular, it does not guarantee that the order
  * will remain constant over time.
  *
+ *（该 HashMap 类）是基于 Map 接口实现的 Hash 表（Hash table）
+ * 该实现（即 该 HashMap 类）提供了所有 map 操作（即 map 这种数据类型所应提供的所有操作）
+ * 并且
+ * 该实现运行键（Key）为 null 和值（Value）为 null 的键值对
+ *（该 HashMap 类和 HashTable 类功能上基本相同，除了该类没有使用 synchronized 关键字以及允许键值对中有 null 值）
+ * 该类无法保证存放在该类（容器）中的元素的顺序
+ * 也无法保证该存放在该类（容器）中的元素的顺序一直会保持不变
+ *（即如 如果当前存放在该类（容器）中的元素的顺序是 A，B，C，但是不能保证顺序一直是 A，B，C（因为扩容可能会导致容器中元素位置的改变））
+ *
  * <p>This implementation provides constant-time performance for the basic
  * operations (<tt>get</tt> and <tt>put</tt>), assuming the hash function
  * disperses the elements properly among the buckets.  Iteration over
@@ -52,6 +61,14 @@ import java.util.function.Function;
  * of key-value mappings).  Thus, it's very important not to set the initial
  * capacity too high (or the load factor too low) if iteration performance is
  * important.
+ *
+ * 该实现（HashMap 类）为基本操作（如 get，put）提供了常数时间（如 O(1) 这种）的时间复杂度
+ * 假设哈希函数能让元素（键值对）和均匀地散列在桶（即 成员变量 数组 table 的槽位）上
+ * 那么
+ * 遍历该容器所需的时间就和该容器的容量（即桶（槽位）的数量）和该容器的实际大小（即 容器中键值对的数量）
+ * 成正比关系
+ * 因此
+ * 如果看重遍历的效率的话，那么就不要把初始容量设置的太高（或者把扩容阈值（即 成员变量 loadFactor）设置的过低）
  *
  * <p>An instance of <tt>HashMap</tt> has two parameters that affect its
  * performance: <i>initial capacity</i> and <i>load factor</i>.  The
