@@ -68,7 +68,7 @@ import java.util.function.Function;
  * 遍历该容器所需的时间就和该容器的容量（即桶（槽位）的数量）和该容器的实际大小（即 容器中键值对的数量）
  * 成正比关系
  * 因此
- * 如果看重遍历的效率的话，那么就不要把初始容量设置的太高（或者把扩容阈值（即 成员变量 loadFactor）设置的过低）
+ * 如果看重遍历的效率的话，那么就不要把初始容量设置的太高（或者把负载因子（即 成员变量 loadFactor）设置的过低）
  *
  * <p>An instance of <tt>HashMap</tt> has two parameters that affect its
  * performance: <i>initial capacity</i> and <i>load factor</i>.  The
@@ -80,6 +80,26 @@ import java.util.function.Function;
  * current capacity, the hash table is <i>rehashed</i> (that is, internal data
  * structures are rebuilt) so that the hash table has approximately twice the
  * number of buckets.
+ *
+ * 对于 HashMap 容器而言，有两个参数（其实也就是成员变量）会影响它的性能
+ *（这里所谓的性能其实就是遍历容器的性能，也就是上面那段提到的内容）
+ * 即
+ * initial capacity（即 容器（即成员变量 table 数组）的初始容量（大小））
+ *（即 成员变量 initialCapacity）
+ * 以及
+ * load factor （即 容器（即 成员变量 table 数组）扩容所需的负载因子）
+ *（即 成员变量 loadFactor）
+ * 其中
+ * capacity（容量）表示的是哈希表（即 成员变量 table 数组）中 “桶” 的数量
+ *（其实就是容器（（即 成员变量 table 数组））中槽位（下标）的数量）
+ * 而 initial capacity 表示的就是 HashMap 实例在创建时，“桶” 的数量
+ *
+ * load factor 是用来度量，当哈希表（即 成员变量 table 数组）达到 “多满” 时，才允许哈希表进行自动扩容
+ *（即 当容器中存放有元素（键值对）的槽位占容器容量比例达到多少时，容器可以扩容）
+ * 当容器中的元素达到 load factor 和当前哈希表大小（即 容器容量大小）的乘积时
+ * 哈希表（即 容器）就会再哈希（rehash），是新的哈希表大小（即 容器容量大小）为原来的两倍
+ *（此时，哈希表中数据结构会被重构（即 有些元素的槽位会发生变化，或者从红黑树变回链表等））
+ *（这里的元素是指真正占用槽位的那个元素（键值对），即 链表的头结点或者红黑树的根节点，而不是指容器中的所有元素）
  *
  * <p>As a general rule, the default load factor (.75) offers a good
  * tradeoff between time and space costs.  Higher values decrease the
@@ -590,7 +610,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * The load factor for the hash table.
      *
-     * 该成员变量用于记录数组（即 成员变量 table）扩容所需的负载因子
+     * 该成员变量用于记录容器（即 成员变量 table 数组）扩容所需的负载因子
      *（如果我们没有显性地指定负载因子，那么，该成员变量的值就是默认的负载因子（即 成员变量 DEFAULT_LOAD_FACTOR）0.75）
      * @serial
      */
@@ -610,7 +630,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * HashMap 就会直接使用离该值最近的那个 2 的幂作为容器的初始大小
      *（可以结合 resize() 方法一起看）
      *
-     * @param  initialCapacity the initial capacity 容器（即成员变量 table）的初始容量（大小）
+     * @param  initialCapacity the initial capacity 容器（即成员变量 table 数组）的初始容量（大小）
      * @param  loadFactor      the load factor 负载因子
      * @throws IllegalArgumentException if the initial capacity is negative
      *         or the load factor is nonpositive
