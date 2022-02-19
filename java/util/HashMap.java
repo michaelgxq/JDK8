@@ -94,12 +94,14 @@ import java.util.function.Function;
  *（其实就是容器（（即 成员变量 table 数组））中槽位（下标）的数量）
  * 而 initial capacity 表示的就是 HashMap 实例在创建时，“桶” 的数量
  *
- * load factor 是用来度量，当哈希表（即 成员变量 table 数组）达到 “多满” 时，才允许哈希表进行自动扩容
+ * load factor 是用来度量，当哈希表（即 成员变量 table 数组）达到 “多满” 时
+ * 才允许哈希表进行自动扩容
  *（即 当容器中存放有元素（键值对）的槽位占容器容量比例达到多少时，容器可以扩容）
  * 当容器中的元素达到 load factor 和当前哈希表大小（即 容器容量大小）的乘积时
  * 哈希表（即 容器）就会再哈希（rehash），是新的哈希表大小（即 容器容量大小）为原来的两倍
  *（此时，哈希表中数据结构会被重构（即 有些元素的槽位会发生变化，或者从红黑树变回链表等））
- *（这里的元素是指真正占用槽位的那个元素（键值对），即 链表的头结点或者红黑树的根节点，而不是指容器中的所有元素）
+ *（这里的元素是指真正占用槽位的那个元素（键值对），即 链表的头结点或者红黑树的根节点，
+ * 而不是指容器中的所有元素）
  *
  * <p>As a general rule, the default load factor (.75) offers a good
  * tradeoff between time and space costs.  Higher values decrease the
@@ -112,6 +114,15 @@ import java.util.function.Function;
  * maximum number of entries divided by the load factor, no rehash
  * operations will ever occur.
  *
+ * 作为一般规则，默认加载因子值（即 0.75）在时间和空间成本上提供了一个很好的平衡
+ * 较高的加载因子值（即 大于 0.75）虽然能降低空间开销（即 空间的浪费）
+ * 但是却增加了查找成本（这在 HashMap 类中的大部分操作（包括 get() 和 put() 方法）中都有体现）
+ * 当我们要手动给 HashMap 设置初始容量时
+ * 需要把希望存放到容器中的元素（键值对）个数以及对应的加载因子考虑进去
+ * 以便降低再哈希（rehash）的操作次数
+ * 如果初始容量大于我们打算存放到容器中的元素的最大值除以加载因子值（即 最大值 / 加载因子）
+ * 那么，再哈希（rehash）操作就不会发生
+ *
  * <p>If many mappings are to be stored in a <tt>HashMap</tt>
  * instance, creating it with a sufficiently large capacity will allow
  * the mappings to be stored more efficiently than letting it perform
@@ -120,6 +131,14 @@ import java.util.function.Function;
  * down performance of any hash table. To ameliorate impact, when keys
  * are {@link Comparable}, this class may use comparison order among
  * keys to help break ties.
+ *
+ * 如果我们要在容器（HashMap 类实例）中存放大量的元素（键值对）
+ * 那么相比在设置一个较小的初始容量，然后让容器自动再哈希（rehash）以便扩容而言
+ * 设置一个较大的初始容量可以使元素（键值对）的存放更有效率
+ * 注意，使用大量哈希值相同的元素（键值对）必然会降低哈希表（即 成员变量 table 数组）的性能
+ * 为了改善这种影响，如果元素的键（Key）是可比较的（即 是 Comparable 接口子类）
+ * 那么该类（即 HashMap 类）会使用比较指令（即 Comparable 接口中的 compareTo() 方法）
+ * 来破坏这些哈希值相同的元素（键值对）之间的关联（即 哈希值相同的这种关联）
  *
  * <p><strong>Note that this implementation is not synchronized.</strong>
  * If multiple threads access a hash map concurrently, and at least one of
@@ -130,11 +149,21 @@ import java.util.function.Function;
  * structural modification.)  This is typically accomplished by
  * synchronizing on some object that naturally encapsulates the map.
  *
+ * 该实现（即 Map 接口的实现类 --- HashMap 类）是非同步的
+ * 如果有多个线程并发操作该类，并且至少有一个线程结构性的修改了该容器
+ *（如，往 HashMap 容器中存入新的键值对（对原有键值对进行覆盖操作不算），删除键值对，链表转树，树转链表等）
+ * 该容器就必须显示的同步（如 对这类操作加 synchronized 关键字等）
+ * 这通常是通过对某个封装了该容器（HashMap 类实例）的对象进行同步操作来完成的
+ *（如 对该对象中与该容器相关的操作加 synchronized 关键字等）
+ *
  * If no such object exists, the map should be "wrapped" using the
  * {@link Collections#synchronizedMap Collections.synchronizedMap}
  * method.  This is best done at creation time, to prevent accidental
  * unsynchronized access to the map:<pre>
  *   Map m = Collections.synchronizedMap(new HashMap(...));</pre>
+ *
+ * 如果没有类似的对象存在，该容器应该使用 Collections.synchronizedMap() 方法来包装
+ * 最好在创建该容器时进行该操作，防止意外的非同步操作该容器
  *
  * <p>The iterators returned by all of this class's "collection view methods"
  * are <i>fail-fast</i>: if the map is structurally modified at any time after
@@ -145,6 +174,15 @@ import java.util.function.Function;
  * arbitrary, non-deterministic behavior at an undetermined time in the
  * future.
  *
+ * 该类中所有 “集合视图方法”（不明白什么意思）返回的迭代器都是快速失败的
+ *（如 map.keySet().iterator() 返回的迭代器）
+ * 即
+ * 如果在该迭代器被创建之后，该容器发生了结构性修改，那么一旦此时再调用迭代器中的 remove() 方法时
+ *（即 Iterator 类中的 remove() 方法）都会报 ConcurrentModificationException 异常
+ * 即
+ * 面对并发修改，迭代器会快速失败（即 抛异常），而不是在未来不确定时刻冒险作出一些不确定性行为
+ *（如 获取一些为 null 的元素等）
+ *
  * <p>Note that the fail-fast behavior of an iterator cannot be guaranteed
  * as it is, generally speaking, impossible to make any hard guarantees in the
  * presence of unsynchronized concurrent modification.  Fail-fast iterators
@@ -152,6 +190,12 @@ import java.util.function.Function;
  * Therefore, it would be wrong to write a program that depended on this
  * exception for its correctness: <i>the fail-fast behavior of iterators
  * should be used only to detect bugs.</i>
+ *
+ * 注意
+ * 无法完成保证快速失败行为在非同步并发操作下一定会发生
+ * 迭代器会尽最大可能抛出 ConcurrentModificationException 异常
+ * 在编写程序时依赖 ConcurrentModificationException 异常（即 认为它在该抛出的时间点一定会抛出）
+ * 的做法是错误的
  *
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
@@ -573,7 +617,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * the HashMap fail-fast.  (See ConcurrentModificationException).
      *
      * 该成员变量用于记录当前这个 HashMap 容器发生结构性改变的次数
-     *（结构性变化包括，往 HashMap 容器中存入一个新的键值对（对原有键值对进行覆盖操作不算），删除一个键值对，链表转树，树转链表等）
+     *（结构性变化包括，往 HashMap 容器中存入新的键值对（对原有键值对进行覆盖操作不算），删除键值对，链表转树，树转链表等）
      *
      * 由于
      * HashMap 容器不是线程安全的
