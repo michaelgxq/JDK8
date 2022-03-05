@@ -234,6 +234,19 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * normal use are not overpopulated, checking for existence of
      * tree bins may be delayed in the course of table methods.
      *
+     * HashMap 类作为一个 “桶化” 的哈希表，在 “桶” 过大时，它们会转变成存放 TreeNode 的 “桶”
+     *（即 转变成红黑树），它们结构上和 TreeMap 类相似
+     * HashMap 类中的大部分方法首先是尝试使用普通 "桶"，当可以使用 TreeNode 类中的方法时
+     * 也会专用 TreeNode 内部类中的方法
+     *（具体使用哪一个是通过 instanceof 关键字来判断到底是 Node 类还是 TreeNode 类）
+     *（即 HashMap 类中的方法首先判断当前元素的类型是 Node 类还是 TreeNode 类，然后再进行不同的操作）
+     * 当 “桶” 中元素过多时，使用 TreeNode 的 “桶” 有更好的查找速度
+     * 但是
+     * 由于大部分情况下，桶中的元素都不会过多（即 一个 “桶” 中的元素不会超过 8 个）
+     * 因此
+     * 判断当前元素是 Node 类还是 TreeNode 类实例的判断是会放在 HashMap 类中一些方法体的后半部分进行的
+     *（这个可以参看下面的一些方法，instanceof 的判断一般都在方法体的后半部分）
+     *
      * Tree bins (i.e., bins whose elements are all TreeNodes) are
      * ordered primarily by hashCode, but in the case of ties, if two
      * elements are of the same "class C implements Comparable<C>",
