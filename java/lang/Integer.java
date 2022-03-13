@@ -55,6 +55,7 @@ public final class Integer extends Number implements Comparable<Integer> {
      * have, -2<sup>31</sup>.
      *
      * 该值成员变量表示 int 类型的最大值（即 -2 的 31 次方）
+     * 
      */
     @Native public static final int   MIN_VALUE = 0x80000000;
 
