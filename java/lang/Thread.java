@@ -60,7 +60,7 @@ import java.util.concurrent.locks.LockSupport;
  * creating thread, and is a daemon thread if and only if the
  * creating thread is a daemon.
  *
- * 
+ *
  * <p>
  * When a Java Virtual Machine starts up, there is usually a single
  * non-daemon thread (which typically calls the method named
