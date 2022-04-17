@@ -40,13 +40,15 @@ import java.security.PrivilegedAction;
  *
  * 该类是客户端 Socket （简称 Socket）的实现，一个 Socket 是两个机器间
  * 通信的端点
- * 
+ *
  * <p>
  * The actual work of the socket is performed by an instance of the
  * {@code SocketImpl} class. An application, by changing
  * the socket factory that creates the socket implementation,
  * can configure itself to create sockets appropriate to the local
  * firewall.
+ *
+ * 真正工作的 Socket 其实是该 Socket 类的实现类
  *
  * @author  unascribed
  * @see     java.net.Socket#setSocketImplFactory(java.net.SocketImplFactory)
