@@ -49,6 +49,7 @@ import java.security.PrivilegedAction;
  * firewall.
  *
  * 真正工作的 Socket 其实是该 Socket 类的实现类
+ * 一个应用
  *
  * @author  unascribed
  * @see     java.net.Socket#setSocketImplFactory(java.net.SocketImplFactory)
