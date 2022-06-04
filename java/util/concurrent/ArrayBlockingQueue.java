@@ -71,7 +71,7 @@ import java.util.Spliterator;
  * <em>optional</em> methods of the {@link Collection} and {@link
  * Iterator} interfaces.
  *
- * 
+ *
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
