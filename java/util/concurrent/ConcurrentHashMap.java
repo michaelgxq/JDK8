@@ -287,6 +287,8 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * 指向新表的字段,当线程进行读写操作的时候如果发现桶上的节点为ForwardingNode(通过hash
      * 值判断),就会转向新的表进行操作。
      *
+     *
+     * 
      * 每个桶的迁移工作都需要锁,但由于现在是其他线程也可以帮忙进行迁移,因此迁移过程的平均等待
      * 时间变少了。迁移的时候需要保证不论是新表还是旧表,那些可以访问的桶都可以被遍历。哈希表中
      * 桶的迁移是从后往前,也就是从table.length - 1开始到0。当遇到ForwardingNode时,遍历
