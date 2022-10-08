@@ -248,7 +248,6 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * 能相关方法)。其次还要尽量保证对空间的占用不比java.util.HashMap多,并且支持空表的
      * 多线程初始化。
      *
-     *
      * 该类的Map是使用哈希表来实现,每个KV对都封装为一个Node节点,大部分的节点都是一个含有
      * hash,key,value,next字段的Node类的实例。除此之外还有一些具有特殊作用的类型存在:
      *
