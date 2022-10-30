@@ -256,6 +256,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * ForwardingNode:该类型用来作为正在进行resizing的桶的头结点(相当于是一个状态标记)。
      * ReservationNode:该类型用于在computeIfAbsent()以及相关方法中作为空间占用符。
      *
+     * 
      * TreeBin,ForwardingNode,ReservationNode这三种类型不保存用户的KV值,且它们
      * 的hash值为负数(实现代码里很多地方都用这个做了判断),这些类型节点存在的意义就是
      * 用来标记当前状态。
