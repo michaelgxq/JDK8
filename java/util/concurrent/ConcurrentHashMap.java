@@ -266,6 +266,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * 由于hash值都是正数这一约束,我们采用Node节点的hash值的高位来达到控制目的,像上面说的
      * 一些hash值为负数的特殊节点在代码实现中会进行特殊操作或者直接忽略掉。
      *
+     *
      * 当向一个空着的桶插入第一个节点时,采用CAS实现,后续的更新操作则都需要锁来控制,
      * 为了避免每一个桶都创建一个锁对象带来的空间浪费,我们使用synchronized锁住每个捅
      * 的list里面的第一个节点来实现。
