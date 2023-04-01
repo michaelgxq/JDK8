@@ -35,7 +35,7 @@ import sun.nio.cs.StreamDecoder;
  * reads bytes and decodes them into characters using a specified {@link
  * java.nio.charset.Charset charset}.  The charset that it uses
  * may be specified by name or may be given explicitly, or the platform's
- * default charset may be accepted.
+ * default charset may be accepted.s
  *
  * <p> Each invocation of one of an InputStreamReader's read() methods may
  * cause one or more bytes to be read from the underlying byte-input stream.
