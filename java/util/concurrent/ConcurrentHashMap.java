@@ -260,6 +260,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * 的hash值为负数(实现代码里很多地方都用这个做了判断),这些类型节点存在的意义就是
      * 用来标记当前状态。
      *
+     * 
      * 该哈希表是延迟初始化的,只有在第一次插入数据的时候才会进行初始化,大小为2的n次方。
      * 哈希表提供的操作需要保证可见性跟原子性,这里采用sun.misc.Unsafe进行实现。
      *
