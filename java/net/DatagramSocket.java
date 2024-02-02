@@ -84,6 +84,7 @@ class DatagramSocket implements java.io.Closeable {
     boolean oldImpl = false;
 
     /**
+     * 
      * Set when a socket is ST_CONNECTED until we are certain
      * that any packets which might have been received prior
      * to calling connect() but not read by the application
