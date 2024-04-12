@@ -276,6 +276,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * 
      * 给每个桶加锁这种策略最大的缺点就是当我要更新同一个桶中的其他节点时由于锁的包括会停止。
      *
+     *
      * 当哈希表存储的元素达到一定阈值(默认为size的75%)时,就会进行扩容操作,即resizing。
      * 当第一个线程触发resizing操作时,会创建新的数组,后续访问哈希表的线程当遇到桶已经过满了
      * 就会开始帮助resizing。TreeBin的使用可以让避免在resizing的过程中出现过满。
